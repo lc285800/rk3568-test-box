@@ -239,6 +239,43 @@ GPIO real read parser with fake runner -> passed
 confirmed GPIO write task accepted -> passed
 ```
 
+## Git 远端与同步记录
+
+远端仓库：
+
+```text
+https://github.com/lc285800/rk3568-test-box.git
+```
+
+当前远端配置：
+
+```bash
+git remote add origin https://github.com/lc285800/rk3568-test-box.git
+git push -u origin main
+```
+
+该流程已跑通。首次推送记录：
+
+```text
+670a5e9 Initial RK3568 test box MVP
+main -> origin/main
+```
+
+后续常规同步流程：
+
+```bash
+git status --short
+git add .
+git commit -m "<本次变更摘要>"
+git push
+```
+
+如果远端已存在但需要确认地址：
+
+```bash
+git remote -v
+```
+
 ## 状态维护规则
 
 - 每次完成一个功能、发现一个限制、改变下一步计划，都要更新本文件。

@@ -74,6 +74,32 @@
 - 前端实现后至少验证 Mac 和 Windows 浏览器兼容性。
 - 涉及真实板卡的测试必须先运行只读探测，再运行写操作。
 
+## Git 同步流程
+
+远端仓库已配置为：
+
+```text
+https://github.com/lc285800/rk3568-test-box.git
+```
+
+首次远端配置和推送已跑通：
+
+```bash
+git remote add origin https://github.com/lc285800/rk3568-test-box.git
+git push -u origin main
+```
+
+后续提交和推送使用：
+
+```bash
+git status --short
+git add .
+git commit -m "<本次变更摘要>"
+git push
+```
+
+推送前先确认测试和状态文档已经更新。不要提交 `.venv/`、`.pytest_cache/` 或其它被 `.gitignore` 忽略的本地缓存。
+
 ## 参考资料
 
 - [野火 LubanCat-RK356x 快速使用手册](https://doc.embedfire.com/linux/rk356x/quick_start/zh/latest/index.html)
