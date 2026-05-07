@@ -75,7 +75,7 @@ http://192.168.2.88
 - 外设访问：优先封装 `libgpiod`、`i2c-tools`、`can-utils`、串口库、`sysfs`/`/dev` 设备节点，不允许前端直接拼接 shell 命令。
 - 运行模式：同时支持真实硬件模式和模拟模式。没有板卡时也能开发 UI 和测试基础流程。
 
-更详细的系统设计见 [docs/DESIGN.md](docs/DESIGN.md)。当前执行进度和实测边界见 [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)。
+快速上手见 [docs/QUICKSTART.md](docs/QUICKSTART.md)。更详细的系统设计见 [docs/DESIGN.md](docs/DESIGN.md)。当前执行进度和实测边界见 [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)。
 
 ## 当前 MVP
 
@@ -88,6 +88,8 @@ http://192.168.2.88
 当前阶段是 GPIO 外设可测试，暂停等待用户实测。现在适合测试 UI、API、mock 模式、dry-run 任务，以及板卡真实模式下的 GPIO 信息、读取和短时输出；还不适合直接控制真实 I2C/UART/CAN/PWM/ADC 外设。
 
 项目后续按单个外设里程碑推进：GPIO 完成后暂停并交给用户测试，测试通过后再继续 I2C、UART、RS232/RS485、CAN、PWM、ADC，依次循环。详细流程记录在 [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)。
+
+实际测试时优先跟随 [docs/QUICKSTART.md](docs/QUICKSTART.md) 操作。后续每完成一个外设，都会把测试步骤追加到该文档。
 
 本地开发运行：
 

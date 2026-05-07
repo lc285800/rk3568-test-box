@@ -13,8 +13,8 @@
 
 ## 工作原则
 
-- 优先阅读 `README.md`、`docs/DESIGN.md` 和 `docs/PROJECT_STATUS.md`，保持实现与文档一致。
-- 每次新增或调整功能时，同步更新 `docs/PROJECT_STATUS.md`。如果影响用户使用或架构，再同步更新 README 或设计文档。
+- 优先阅读 `README.md`、`docs/QUICKSTART.md`、`docs/DESIGN.md` 和 `docs/PROJECT_STATUS.md`，保持实现与文档一致。
+- 每次新增或调整功能时，同步更新 `docs/PROJECT_STATUS.md`。每完成一个外设可测试节点，也必须同步更新 `docs/QUICKSTART.md`。如果影响用户使用或架构，再同步更新 README 或设计文档。
 - 回答项目当前阶段、能否实测、下一步做什么时，以 `docs/PROJECT_STATUS.md` 为准。
 - 项目按单个外设里程碑推进。完成一个外设能力后必须暂停，更新 `docs/PROJECT_STATUS.md`，让用户实测；用户反馈 bug 时优先修 bug；用户确认通过或明确说“项目继续”后，再进入下一个外设。
 - 默认先实现模拟模式和只读探测接口，再实现真实硬件写操作。
