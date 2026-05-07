@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RK3568 测试工具盒</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>RK3568 测试工具盒</h1>
+        <p>Web 控制台 MVP</p>
+      </div>
+      <div class="status">
+        <span id="status-dot" class="dot dot-warn"></span>
+        <span id="status-text">连接中</span>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel hero">
+        <div>
+          <h2>设备概览</h2>
+          <p id="summary">正在读取板卡信息...</p>
+        </div>
+        <button id="refresh">刷新</button>
+      </section>
+
+      <section class="grid">
+        <article class="panel">
+          <h2>系统信息</h2>
+          <dl id="system-info" class="kv"></dl>
+        </article>
+
+        <article class="panel">
+          <h2>外设资源</h2>
+          <div id="resources" class="resource-list"></div>
+        </article>
+      </section>
+
+      <section class="panel">
+        <h2>测试任务</h2>
+        <form id="task-form" class="task-form">
+          <label>
+            接口
+            <select name="interface">
+              <option value="demo">Demo</option>
+              <option value="gpio">GPIO</option>
+              <option value="i2c">I2C</option>
+              <option value="uart">UART</option>
+              <option value="rs232">RS232</option>
+              <option value="rs485">RS485</option>
+              <option value="can">CAN</option>
+              <option value="pwm">PWM</option>
+              <option value="adc">ADC</option>
+            </select>
+          </label>
+          <label>
+            动作
+            <input name="action" value="ping" />
+          </label>
+          <label>
+            参数 JSON
+            <input name="params" value='{"message":"hello"}' />
+          </label>
+          <label class="check">
+            <input name="dry_run" type="checkbox" checked />
+            Dry run
+          </label>
+          <button type="submit">执行</button>
+        </form>
+        <p id="task-result" class="hint"></p>
+      </section>
+
+      <section class="panel">
+        <h2>GPIO 测试</h2>
+        <form id="gpio-form" class="task-form gpio-form">
+          <label>
+            芯片
+            <input name="chip" value="/dev/gpiochip0" />
+          </label>
+          <label>
+            Line
+            <input name="line" type="number" min="0" max="511" value="0" />
+          </label>
+          <label>
+            输出值
+            <select name="value">
+              <option value="1">1 高电平</option>
+              <option value="0">0 低电平</option>
+            </select>
+          </label>
+          <label>
+            保持 ms
+            <input name="duration_ms" type="number" min="10" max="10000" value="200" />
+          </label>
+          <label class="check">
+            <input name="dry_run" type="checkbox" checked />
+            Dry run
+          </label>
+          <label class="check">
+            <input name="confirm" type="checkbox" />
+            确认写入
+          </label>
+          <div class="button-row">
+            <button type="button" data-gpio-action="info">信息</button>
+            <button type="button" data-gpio-action="read">读取</button>
+            <button type="button" data-gpio-action="write">输出</button>
+          </div>
+        </form>
+        <p class="hint">真实输出前请取消 Dry run，并勾选确认写入。建议先用万用表或 LED 串联限流电阻测试空闲引脚。</p>
+        <pre id="gpio-result" class="result"></pre>
+      </section>
+
+      <section class="panel">
+        <div class="log-head">
+          <h2>实时日志</h2>
+          <button id="clear-log">清空</button>
+        </div>
+        <pre id="log" class="log"></pre>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
