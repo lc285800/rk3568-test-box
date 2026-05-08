@@ -28,6 +28,7 @@
   - `README.md`
   - `docs/DESIGN.md`
   - `docs/QUICKSTART.md`
+  - `docs/ISSUES.md`
   - `AGENTS.md`
   - `docs/PROJECT_STATUS.md`
 - Git 仓库初始化。
@@ -306,6 +307,7 @@ git remote -v
 
 - 每次完成一个功能、发现一个限制、改变下一步计划，都要更新本文件。
 - 每次完成一个外设可测试节点，都要更新 `docs/QUICKSTART.md`，补充该外设的实测步骤。
+- 每次遇到板卡实测问题、依赖问题、兼容性问题或外设 bug，都要更新 `docs/ISSUES.md`。
 - `docs/DESIGN.md` 记录稳定架构，不作为每日进度记录。
 - `README.md` 面向使用者，只放当前阶段摘要和入口。
 - `AGENTS.md` 面向后续工程代理，必须提醒先读本文件。

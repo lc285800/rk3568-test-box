@@ -75,7 +75,7 @@ http://192.168.2.88
 - 外设访问：优先封装 `libgpiod`、`i2c-tools`、`can-utils`、串口库、`sysfs`/`/dev` 设备节点，不允许前端直接拼接 shell 命令。
 - 运行模式：同时支持真实硬件模式和模拟模式。没有板卡时也能开发 UI 和测试基础流程。
 
-快速上手见 [docs/QUICKSTART.md](docs/QUICKSTART.md)。更详细的系统设计见 [docs/DESIGN.md](docs/DESIGN.md)。当前执行进度和实测边界见 [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)。
+快速上手见 [docs/QUICKSTART.md](docs/QUICKSTART.md)。更详细的系统设计见 [docs/DESIGN.md](docs/DESIGN.md)。当前执行进度和实测边界见 [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)。问题记录见 [docs/ISSUES.md](docs/ISSUES.md)。
 
 ## 当前 MVP
 
