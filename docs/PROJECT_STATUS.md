@@ -266,6 +266,17 @@ GPIO checks:
   write dry-run /dev/gpiochip0 line 0 value 1 duration_ms 200 -> completed
 ```
 
+启动路径问题验证：
+
+```text
+cd /root/rk3568_finger_box -> import board_agent ok
+cd /root -> find board_agent None
+Added scripts/run_board_agent.sh to avoid running from the wrong directory.
+Started /root/rk3568_finger_box/scripts/run_board_agent.sh from /root -> ok
+Current board service PID 392691, LISTEN 0.0.0.0:8080
+GET /api/health -> 200
+```
+
 ## Git 远端与同步记录
 
 远端仓库：

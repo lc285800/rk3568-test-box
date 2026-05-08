@@ -66,7 +66,7 @@ eval-type-backport>=0.2,<1.0
 启动 Board Agent：
 
 ```bash
-RK_BOX_MODE=auto RK_BOX_HOST=0.0.0.0 RK_BOX_PORT=8080 python3 -m board_agent
+./scripts/run_board_agent.sh
 ```
 
 启动后保持这个终端不要关闭。看到类似下面的信息表示服务已启动：
@@ -74,6 +74,15 @@ RK_BOX_MODE=auto RK_BOX_HOST=0.0.0.0 RK_BOX_PORT=8080 python3 -m board_agent
 ```text
 Uvicorn running on http://0.0.0.0:8080
 ```
+
+也可以手动启动，但必须先进入项目根目录：
+
+```bash
+cd /root/rk3568_finger_box
+RK_BOX_MODE=auto RK_BOX_HOST=0.0.0.0 RK_BOX_PORT=8080 python3 -m board_agent
+```
+
+如果在 `/root` 等其它目录直接执行 `python3 -m board_agent`，会提示找不到 `board_agent` 模块。
 
 ## 3. 打开 Web 控制台
 
