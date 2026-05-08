@@ -1,6 +1,6 @@
 # 项目执行进度
 
-更新时间：2026-05-07
+更新时间：2026-05-08
 
 ## 当前阶段
 
@@ -71,10 +71,10 @@
 ## 待完成
 
 - 真实板卡部署验证：
-  - 将 Board Agent 部署到 `192.168.2.88`。
-  - 在板卡上安装依赖并启动服务。
-  - 从电脑访问 `http://192.168.2.88:8080`。
-  - 验证真实 `/api/system` 和 `/api/resources` 输出。
+  - 已将 Board Agent 部署到 `192.168.2.88`。
+  - 已在板卡上安装依赖并启动服务。
+  - 已从电脑访问 `http://192.168.2.88:8080`。
+  - 已验证真实 `/api/system` 和 `/api/resources` 输出。
 - GPIO Adapter 后续增强：
   - 边沿事件监听。
   - line 占用可视化。
@@ -240,6 +240,29 @@ GPIO Adapter mock write command -> passed
 GPIO invalid line validation -> passed
 GPIO real read parser with fake runner -> passed
 confirmed GPIO write task accepted -> passed
+```
+
+板卡真实部署验证：
+
+```text
+Board Python: 3.8.10
+Fixed dependency compatibility:
+  typing-extensions>=4.12.2
+  eval-type-backport>=0.2,<1.0
+Fixed Python 3.8 runtime compatibility:
+  replaced asyncio.to_thread with loop.run_in_executor
+Board service:
+  PID 275765
+  LISTEN 0.0.0.0:8080
+Web/API checks:
+  GET / -> 200
+  GET /api/health -> 200
+  GET /api/system -> 200
+  GET /api/resources -> 200
+GPIO checks:
+  info -> completed
+  read /dev/gpiochip0 line 0 -> completed, value 0
+  write dry-run /dev/gpiochip0 line 0 value 1 duration_ms 200 -> completed
 ```
 
 ## Git 远端与同步记录

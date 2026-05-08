@@ -54,6 +54,15 @@ cd /root/rk3568_finger_box
 pip3 install -r requirements.txt
 ```
 
+板卡当前是 Python 3.8.10，依赖文件已经包含 Python 3.8 兼容项：
+
+```text
+typing-extensions>=4.12.2
+eval-type-backport>=0.2,<1.0
+```
+
+如果安装过程中曾出现 Pydantic 解析 `list[str]` 的错误，重新拉取最新代码或同步最新 `requirements.txt` 后，再执行一次安装命令。
+
 启动 Board Agent：
 
 ```bash

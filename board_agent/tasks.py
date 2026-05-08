@@ -72,7 +72,8 @@ class TaskManager:
         await asyncio.sleep(0.15)
 
         try:
-            record.result = await asyncio.to_thread(self._dispatch, record.request)
+            loop = asyncio.get_running_loop()
+            record.result = await loop.run_in_executor(None, self._dispatch, record.request)
             simulated = record.result.get("simulated", False)
             if simulated:
                 await self._log(record, "Task ran in dry-run/mock mode")
