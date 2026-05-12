@@ -21,6 +21,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
+  overflow-x: hidden;
 }
 
 button,
@@ -43,14 +44,24 @@ button:hover {
   background: var(--accent-strong);
 }
 
-input,
+input:not([type="checkbox"]),
 select {
+  width: 100%;
+  min-width: 0;
   min-height: 38px;
   border: 1px solid var(--line);
   border-radius: 6px;
   padding: 0 10px;
   background: #ffffff;
   color: var(--ink);
+}
+
+input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--accent);
+  flex: 0 0 auto;
 }
 
 .topbar {
@@ -104,12 +115,14 @@ select {
 .layout {
   display: grid;
   gap: 16px;
+  min-width: 0;
   max-width: 1180px;
   margin: 0 auto;
   padding: 24px clamp(16px, 4vw, 40px) 40px;
 }
 
 .panel {
+  min-width: 0;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -139,10 +152,15 @@ select {
   gap: 16px;
 }
 
+.grid > * {
+  min-width: 0;
+}
+
 .kv {
   display: grid;
   grid-template-columns: 120px minmax(0, 1fr);
   gap: 10px 14px;
+  min-width: 0;
   margin: 0;
 }
 
@@ -158,9 +176,11 @@ select {
 .resource-list {
   display: grid;
   gap: 10px;
+  min-width: 0;
 }
 
 .resource {
+  min-width: 0;
   border-top: 1px solid var(--line);
   padding-top: 10px;
 }
@@ -177,35 +197,47 @@ select {
 
 .resource code {
   display: inline-block;
+  max-width: 100%;
   margin: 3px 5px 3px 0;
   padding: 3px 6px;
   border-radius: 5px;
   background: #edf2f7;
   color: #253142;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .task-form {
   display: grid;
-  grid-template-columns: 150px 150px minmax(220px, 1fr) 110px 90px;
+  grid-template-columns: 150px 150px minmax(220px, 1fr) auto 90px;
   gap: 12px;
   align-items: end;
+  min-width: 0;
 }
 
 .gpio-form {
-  grid-template-columns: 170px 90px 130px 120px 110px 120px minmax(220px, 1fr);
+  grid-template-columns: minmax(170px, 1fr) 90px auto auto minmax(320px, 1fr);
+  column-gap: 16px;
 }
 
 .task-form label {
   display: grid;
   gap: 6px;
+  min-width: 0;
   color: var(--muted);
 }
 
 .task-form .check {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
+  width: max-content;
   min-height: 38px;
+  white-space: nowrap;
+}
+
+.gpio-form .check {
+  align-self: end;
 }
 
 .hint {
@@ -217,12 +249,14 @@ select {
   display: flex;
   align-items: center;
   gap: 8px;
+  justify-content: flex-end;
   min-height: 38px;
 }
 
 .result {
   min-height: 80px;
-  overflow: auto;
+  max-width: 100%;
+  overflow: hidden;
   margin: 8px 0 0;
   padding: 12px;
   border-radius: 6px;
@@ -230,6 +264,94 @@ select {
   color: #1f2937;
   font-size: 13px;
   line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.result-empty {
+  min-height: 60px;
+}
+
+.result-card {
+  display: grid;
+  gap: 12px;
+  white-space: normal;
+}
+
+.result-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  color: var(--muted);
+}
+
+.result-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 2px 8px;
+  border-radius: 5px;
+  background: #e6f4f1;
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
+.result-kv {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px 14px;
+}
+
+.result-kv div {
+  min-width: 0;
+}
+
+.result-kv dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.result-kv dd {
+  margin: 3px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.gpio-lines {
+  width: 100%;
+  border-collapse: collapse;
+  overflow-wrap: anywhere;
+}
+
+.gpio-lines th,
+.gpio-lines td {
+  border-top: 1px solid var(--line);
+  padding: 7px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.gpio-lines th {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.gpio-lines td {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+}
+
+.raw-output {
+  overflow: auto;
+  margin: 0;
+  padding: 10px;
+  border-radius: 6px;
+  background: #e6edf5;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .log-head {
@@ -242,6 +364,7 @@ select {
 .log {
   min-height: 220px;
   max-height: 360px;
+  max-width: 100%;
   overflow: auto;
   margin: 0;
   padding: 14px;
@@ -250,6 +373,8 @@ select {
   color: #d1fae5;
   font-size: 13px;
   line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 860px) {
@@ -262,6 +387,11 @@ select {
   .grid,
   .task-form {
     grid-template-columns: 1fr;
+  }
+
+  .task-form .check,
+  .button-row {
+    justify-content: flex-start;
   }
 
   .kv {

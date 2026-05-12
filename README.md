@@ -14,10 +14,54 @@
 默认连接入口为：
 
 ```text
-http://192.168.2.88
+http://192.168.2.88:8080
 ```
 
 实际部署时可以继续保留固定 IP，也可以增加 mDNS 域名或设备发现功能。
+
+## 当前开发与实测环境
+
+当前项目按“MacBook 开发与浏览器控制端 + 鲁班猫 2 金手指 RK3568 板卡端”的局域网环境推进：
+
+| 角色 | 设备 | 用途 |
+| --- | --- | --- |
+| 开发/控制端 | MacBook | 编辑代码、运行本地 mock、用 Safari/Chrome 打开 Web 控制台、通过 SSH/SCP 操作板卡 |
+| 测试盒端 | 鲁班猫 2 金手指 RK3568 | 运行 Board Agent，访问 GPIO/I2C/UART/CAN/PWM/ADC 等真实外设资源 |
+
+默认网络和登录信息：
+
+```text
+板卡 IP: 192.168.2.88
+Web 控制台: http://192.168.2.88:8080
+SSH 用户: root
+SSH 密码: root
+板卡项目目录: /root/rk3568_finger_box
+MacBook 项目目录: /Users/evanliu/Documents/rk3568_finger_box
+```
+
+从 MacBook 登录板卡：
+
+```bash
+ssh root@192.168.2.88
+```
+
+从 MacBook 上传单个文件到板卡，例如同步前端样式：
+
+```bash
+scp web/styles.css root@192.168.2.88:/root/rk3568_finger_box/web/styles.css
+```
+
+从 MacBook 远程执行板卡命令，例如确认服务和端口：
+
+```bash
+ssh root@192.168.2.88 "cd /root/rk3568_finger_box && ./scripts/run_board_agent.sh"
+```
+
+如果只需要在浏览器验证板端 Web 控制台，优先打开：
+
+```text
+http://192.168.2.88:8080
+```
 
 ## 板卡现状
 
@@ -85,7 +129,7 @@ http://192.168.2.88
 - `web/`：无需构建工具的静态 Web 控制台，可以展示设备资源、提交 dry-run 任务并显示实时日志。
 - `tests/`：不依赖真实板卡的基础测试，覆盖模拟资源和危险写操作确认逻辑。
 
-当前阶段是 GPIO 外设可测试，暂停等待用户实测。现在适合测试 UI、API、mock 模式、dry-run 任务，以及板卡真实模式下的 GPIO 信息、读取和短时输出；还不适合直接控制真实 I2C/UART/CAN/PWM/ADC 外设。
+当前阶段是 GPIO 外设可测试，暂停等待用户实测。现在适合测试 UI、API、mock 模式、dry-run 任务，以及板卡真实模式下的 GPIO 信息、读取和持续高/低电平输出；还不适合直接控制真实 I2C/UART/CAN/PWM/ADC 外设。
 
 项目后续按单个外设里程碑推进：GPIO 完成后暂停并交给用户测试，测试通过后再继续 I2C、UART、RS232/RS485、CAN、PWM、ADC，依次循环。详细流程记录在 [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)。
 

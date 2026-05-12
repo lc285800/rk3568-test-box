@@ -11,6 +11,105 @@
 - Board Agent 首版推荐 Python + FastAPI，前端可按项目后续实际技术栈选择。
 - REST 用于配置和动作请求，WebSocket 用于实时日志、任务进度和状态推送。
 
+## 当前环境与远程操作
+
+当前实测环境：
+
+- 开发/控制端：MacBook，本仓库路径为 `/Users/evanliu/Documents/rk3568_finger_box`。
+- 板端：鲁班猫 2 金手指 RK3568，IP 为 `192.168.2.88`。
+- MacBook 和板卡处于同一个局域网。
+- 板端 SSH 用户名为 `root`，密码为 `root`。
+- 板端项目目录为 `/root/rk3568_finger_box`。
+- 板端 Web 控制台默认访问地址为 `http://192.168.2.88:8080`。
+
+后续 Codex 可以直接按以下方式操作板卡。
+
+连通性检查：
+
+```bash
+ping -c 1 -W 2 192.168.2.88
+curl -s -o /dev/null -w "%{http_code}\n" http://192.168.2.88:8080/
+```
+
+SSH 登录板卡：
+
+```bash
+ssh root@192.168.2.88
+```
+
+远程执行单条命令：
+
+```bash
+ssh root@192.168.2.88 "cd /root/rk3568_finger_box && pwd && git status --short"
+```
+
+上传单个文件到板卡：
+
+```bash
+scp web/styles.css root@192.168.2.88:/root/rk3568_finger_box/web/styles.css
+```
+
+上传多个文件到板卡：
+
+```bash
+scp web/index.html web/styles.css root@192.168.2.88:/root/rk3568_finger_box/web/
+scp docs/PROJECT_STATUS.md docs/ISSUES.md root@192.168.2.88:/root/rk3568_finger_box/docs/
+```
+
+如果当前环境没有免密 SSH，可使用系统已有的 `expect` 自动输入密码：
+
+```bash
+expect <<'EOF'
+set timeout 20
+spawn ssh -o StrictHostKeyChecking=no root@192.168.2.88 "cd /root/rk3568_finger_box && pwd"
+expect {
+  "*assword:*" { send "root\r"; exp_continue }
+  eof
+}
+catch wait result
+exit [lindex $result 3]
+EOF
+```
+
+用 `expect` 上传文件示例：
+
+```bash
+expect <<'EOF'
+set timeout 20
+spawn scp -o StrictHostKeyChecking=no web/styles.css root@192.168.2.88:/root/rk3568_finger_box/web/styles.css
+expect {
+  "*assword:*" { send "root\r"; exp_continue }
+  eof
+}
+catch wait result
+exit [lindex $result 3]
+EOF
+```
+
+启动或重启板端服务前，优先使用仓库内脚本，避免从错误目录启动导致 `No module named board_agent`：
+
+```bash
+ssh root@192.168.2.88 "cd /root/rk3568_finger_box && ./scripts/run_board_agent.sh"
+```
+
+如果需要验证真实板卡 Web UI，优先直接针对真实板卡地址 `http://192.168.2.88:8080` 做命令行检查，不要用 `127.0.0.1` 代替真实板卡地址，除非明确是在做本地 mock 验证。
+
+推荐先用 `curl` 验证页面、静态资源和 API 是否加载到新版，避免 Codex 内置浏览器连接板卡页面时卡住：
+
+```bash
+curl -s http://192.168.2.88:8080/ | rg "输出低|输出高|static/app.js"
+curl -s 'http://192.168.2.88:8080/static/app.js?v=20260513-gpio-held' | rg "gpioValue|持续保持"
+curl -s -o /dev/null -w "%{http_code}\n" http://192.168.2.88:8080/api/health
+```
+
+如果必须肉眼确认真实板卡 Web UI，默认使用 MacBook 的 Safari 或 Computer Use 打开 `http://192.168.2.88:8080`。不要优先使用 Codex 内置浏览器验证这个板卡地址；本次实测中内置浏览器连接该地址会卡住，而 `curl` 和真实板卡 API 验证稳定可用。
+
+远程操作注意事项：
+
+- 上传文件时目标路径必须精确到板端项目目录下对应子目录，避免误传到 `/root/rk3568_finger_box/` 根目录。
+- 修改前端静态文件后，必要时给 CSS/JS URL 加版本号，避免 Safari 缓存旧文件。
+- 不要在没有明确需求时远程执行真实硬件写操作；涉及 GPIO 输出、CAN 发送、PWM 输出等必须符合硬件安全要求。
+
 ## 工作原则
 
 - 优先阅读 `README.md`、`docs/QUICKSTART.md`、`docs/DESIGN.md`、`docs/PROJECT_STATUS.md` 和 `docs/ISSUES.md`，保持实现与文档一致。

@@ -1,6 +1,6 @@
 # 项目执行进度
 
-更新时间：2026-05-08
+更新时间：2026-05-13
 
 ## 当前阶段
 
@@ -14,7 +14,7 @@
 - 提交 dry-run 测试任务。
 - 通过 WebSocket 查看实时日志。
 - 使用 mock 模式模拟 GPIO、I2C、UART、CAN、PWM、ADC 资源。
-- 在板卡真实模式下测试 GPIO 信息、GPIO 输入读取、短时 GPIO 输出。
+- 在板卡真实模式下测试 GPIO 信息、GPIO 输入读取、持续高/低电平输出。
 
 当前还不能直接用于真实控制板卡外设：
 
@@ -59,15 +59,25 @@
 - GPIO Adapter：
   - `info`：调用 `gpioinfo` 查看 GPIO chip/line 信息。
   - `read`：调用 `gpioget` 读取一个或多个 GPIO line。
-  - `write`：调用 `gpioset --mode=time` 做短时输出。
+  - `write`：调用 `gpioset --mode=signal` 做持续高/低电平输出。
   - 支持 `dry_run` 和 mock 模式。
   - 写操作需要 `confirm=true`，否则后端拒绝。
-  - 支持 chip、line、value、duration_ms、active_low 参数校验。
+  - 支持 chip、line、value、active_low 参数校验。
+  - 同一 chip/line 再次输出时会先停止旧输出进程，再启动新输出进程。
 - Web GPIO 面板：
   - GPIO 信息。
   - GPIO 读取。
   - GPIO 输出。
   - Dry run 和确认写入开关。
+  - GPIO 输出面板已简化为“读取 / 输出低 / 输出高”，不再暴露保持时间。
+- Web UI 修复：
+  - 实时日志和结果区域中的长 JSON 自动换行，不再撑宽页面。
+  - 已在 MacBook Safari 访问 `http://192.168.2.88:8080` 提交 dry-run ping 任务验证。
+  - GPIO 面板的 Dry run/确认写入控件在宽屏下已重新对齐。
+  - GPIO 信息结果改为摘要和 line 表格展示，不再直接展示整段任务 JSON。
+- 项目环境文档：
+  - `README.md` 补充 MacBook 与鲁班猫 2 金手指 RK3568 同局域网、Web 入口、SSH 登录和 SCP 上传说明。
+  - `AGENTS.md` 补充后续 Codex 可直接使用的板卡远程操作流程。
 
 ## 待完成
 
@@ -169,7 +179,7 @@
 - Web UI 是否能刷新系统和资源信息。
 - dry-run 任务是否能提交并在日志中显示。
 - WebSocket 是否会实时推送任务事件。
-- 板卡真实模式下的 GPIO 信息、读取和短时输出。
+- 板卡真实模式下的 GPIO 信息、读取和持续高/低电平输出。
 
 现在不适合测试：
 
@@ -204,14 +214,15 @@ http://192.168.2.88:8080
 3. 保持 Dry run 勾选，选择空闲 line，点击“读取”。
 4. 接好 LED 和限流电阻，或用万用表连接确认安全的 GPIO line。
 5. 取消 Dry run，勾选“确认写入”。
-6. 设置 `duration_ms=200` 到 `1000`，点击“输出”。
-7. 观察 LED/万用表变化，并查看实时日志和任务结果。
+6. 点击“输出高”或“输出低”。
+7. 观察 LED/万用表/逻辑分析仪变化，并查看实时日志和任务结果。
+8. 如需切换电平，直接点击另一个输出按钮。
 
 GPIO 测试注意事项：
 
 - 不要对 `gpioinfo` 显示 `[used]` 的 line 做输出测试。
 - 不要直接把 GPIO 接到 5V。
-- 输出测试建议先从 200ms 短时脉冲开始。
+- 输出会保持到再次输出同一 line、服务重启或板卡重启。
 - 如果不确定 40pin 对应关系，先只做“信息”和“读取”，不要做“输出”。
 
 ## 验证记录
@@ -220,8 +231,8 @@ GPIO 测试注意事项：
 
 ```text
 python3 -m compileall board_agent tests
-pytest -q
-11 passed
+.venv/bin/pytest
+12 passed
 ```
 
 本地 mock 服务已验证：
@@ -238,6 +249,7 @@ GPIO 验证：
 ```text
 GPIO Adapter mock read -> passed
 GPIO Adapter mock write command -> passed
+GPIO real held output replacement -> passed
 GPIO invalid line validation -> passed
 GPIO real read parser with fake runner -> passed
 confirmed GPIO write task accepted -> passed
@@ -253,7 +265,7 @@ Fixed dependency compatibility:
 Fixed Python 3.8 runtime compatibility:
   replaced asyncio.to_thread with loop.run_in_executor
 Board service:
-  PID 275765
+  PID 261082
   LISTEN 0.0.0.0:8080
 Web/API checks:
   GET / -> 200
@@ -263,7 +275,9 @@ Web/API checks:
 GPIO checks:
   info -> completed
   read /dev/gpiochip0 line 0 -> completed, value 0
-  write dry-run /dev/gpiochip0 line 0 value 1 duration_ms 200 -> completed
+  write dry-run /dev/gpiochip0 line 0 value 1 -> completed
+  write dry-run /dev/gpiochip4 line 22 value 1 -> command gpioset --mode=signal /dev/gpiochip4 22=1
+  write dry-run /dev/gpiochip4 line 22 value 0 -> command gpioset --mode=signal /dev/gpiochip4 22=0
 ```
 
 启动路径问题验证：

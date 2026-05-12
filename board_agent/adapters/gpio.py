@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import atexit
 import re
 import shutil
 import subprocess
+import time
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -10,6 +12,20 @@ from typing import Any, Protocol
 class CommandRunner(Protocol):
     def __call__(self, command: list[str], timeout: float) -> subprocess.CompletedProcess[str]:
         ...
+
+
+class ProcessStarter(Protocol):
+    def __call__(self, command: list[str]) -> subprocess.Popen[str]:
+        ...
+
+
+@dataclass
+class HeldOutput:
+    process: subprocess.Popen[str]
+    value: int
+
+
+HELD_OUTPUTS: dict[tuple[str, int], HeldOutput] = {}
 
 
 def default_runner(command: list[str], timeout: float) -> subprocess.CompletedProcess[str]:
@@ -22,10 +38,21 @@ def default_runner(command: list[str], timeout: float) -> subprocess.CompletedPr
     )
 
 
+def default_process_starter(command: list[str]) -> subprocess.Popen[str]:
+    return subprocess.Popen(
+        command,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+
+
 @dataclass(frozen=True)
 class GpioAdapter:
     mock_mode: bool = False
     runner: CommandRunner = default_runner
+    process_starter: ProcessStarter = default_process_starter
 
     def handle(self, action: str, params: dict[str, Any], dry_run: bool) -> dict[str, Any]:
         if action == "info":
@@ -55,6 +82,18 @@ class GpioAdapter:
         chip = require_chip(params.get("chip"))
         lines = parse_lines(params)
         active_low = bool(params.get("active_low", False))
+        held_values = {
+            str(line): HELD_OUTPUTS[(chip, line)].value
+            for line in lines
+            if (chip, line) in HELD_OUTPUTS and HELD_OUTPUTS[(chip, line)].process.poll() is None
+        }
+        if held_values and len(held_values) == len(lines):
+            return {
+                "chip": chip,
+                "values": held_values,
+                "simulated": False,
+                "source": "held_output",
+            }
         if self.mock_mode:
             values = {str(line): line % 2 for line in lines}
             return {"chip": chip, "values": values, "simulated": True}
@@ -72,17 +111,11 @@ class GpioAdapter:
         chip = require_chip(params.get("chip"))
         line = parse_line(params.get("line"))
         value = parse_value(params.get("value"))
-        duration_ms = parse_duration_ms(params.get("duration_ms", 200))
         active_low = bool(params.get("active_low", False))
 
-        command = ["gpioset", "--mode=time"]
+        command = ["gpioset", "--mode=signal"]
         if active_low:
             command.append("--active-low")
-        seconds, usec = divmod(duration_ms * 1000, 1_000_000)
-        if seconds:
-            command.append(f"--sec={seconds}")
-        if usec:
-            command.append(f"--usec={usec}")
         command.extend([chip, f"{line}={value}"])
 
         if dry_run or self.mock_mode:
@@ -90,25 +123,33 @@ class GpioAdapter:
                 "chip": chip,
                 "line": line,
                 "value": value,
-                "duration_ms": duration_ms,
                 "command": command,
                 "simulated": True,
             }
 
-        completed = self._run(command, timeout=max(2.0, duration_ms / 1000 + 2.0))
+        self._ensure_tool("gpioset")
+        key = (chip, line)
+        self._stop_held_output(key)
+        process = self.process_starter(command)
+        time.sleep(0.05)
+        if process.poll() is not None:
+            stderr = ""
+            if process.stderr is not None:
+                stderr = process.stderr.read().strip()
+            raise RuntimeError(stderr or f"GPIO command exited early: {' '.join(command)}")
+        HELD_OUTPUTS[key] = HeldOutput(process=process, value=value)
         return {
             "chip": chip,
             "line": line,
             "value": value,
-            "duration_ms": duration_ms,
-            "stdout": completed.stdout.strip(),
+            "mode": "held",
+            "stdout": "",
             "simulated": False,
         }
 
     def _run(self, command: list[str], timeout: float) -> subprocess.CompletedProcess[str]:
         tool = command[0]
-        if shutil.which(tool) is None:
-            raise RuntimeError(f"Required GPIO tool not found: {tool}")
+        self._ensure_tool(tool)
         try:
             completed = self.runner(command, timeout)
         except subprocess.TimeoutExpired as exc:
@@ -117,6 +158,21 @@ class GpioAdapter:
             output = (completed.stderr or completed.stdout).strip()
             raise RuntimeError(output or f"GPIO command failed: {' '.join(command)}")
         return completed
+
+    def _ensure_tool(self, tool: str) -> None:
+        if shutil.which(tool) is None:
+            raise RuntimeError(f"Required GPIO tool not found: {tool}")
+
+    def _stop_held_output(self, key: tuple[str, int]) -> None:
+        held = HELD_OUTPUTS.pop(key, None)
+        if held is None or held.process.poll() is not None:
+            return
+        held.process.terminate()
+        try:
+            held.process.wait(timeout=1.0)
+        except subprocess.TimeoutExpired:
+            held.process.kill()
+            held.process.wait(timeout=1.0)
 
 
 def optional_chip(value: Any) -> str | None:
@@ -166,16 +222,6 @@ def parse_value(value: Any) -> int:
     return parsed
 
 
-def parse_duration_ms(value: Any) -> int:
-    try:
-        parsed = int(value)
-    except (TypeError, ValueError) as exc:
-        raise ValueError("GPIO duration_ms must be an integer") from exc
-    if not 10 <= parsed <= 10_000:
-        raise ValueError("GPIO duration_ms must be between 10 and 10000")
-    return parsed
-
-
 def mock_gpioinfo(chip: str | None) -> str:
     chip_name = chip or "gpiochip0"
     return "\n".join(
@@ -186,3 +232,13 @@ def mock_gpioinfo(chip: str | None) -> str:
             '    line   2:      unnamed       unused   output active-high',
         ]
     )
+
+
+def stop_all_held_outputs() -> None:
+    for key in list(HELD_OUTPUTS):
+        held = HELD_OUTPUTS.pop(key)
+        if held.process.poll() is None:
+            held.process.terminate()
+
+
+atexit.register(stop_all_held_outputs)

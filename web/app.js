@@ -149,8 +149,7 @@ document.querySelectorAll("[data-gpio-action]").forEach((button) => {
       line: Number(data.get("line")),
     };
     if (action === "write") {
-      params.value = Number(data.get("value"));
-      params.duration_ms = Number(data.get("duration_ms"));
+      params.value = Number(button.dataset.gpioValue);
     }
 
     const body = {
@@ -169,7 +168,7 @@ document.querySelectorAll("[data-gpio-action]").forEach((button) => {
       });
       const created = await response.json();
       appendLog("GPIO 任务已提交", created);
-      gpioResult.textContent = JSON.stringify(created, null, 2);
+      renderTaskResult(created, gpioResult);
       window.setTimeout(() => loadTask(created.id, gpioResult), 500);
     } catch (error) {
       gpioResult.textContent = `GPIO 任务失败: ${error.message}`;
@@ -181,13 +180,179 @@ document.querySelectorAll("[data-gpio-action]").forEach((button) => {
 async function loadTask(id, target) {
   try {
     const task = await getJson(`/api/tasks/${id}`);
-    target.textContent = JSON.stringify(task, null, 2);
+    renderTaskResult(task, target);
     if (task.status === "queued" || task.status === "running") {
       window.setTimeout(() => loadTask(id, target), 500);
     }
   } catch (error) {
     target.textContent = `读取任务失败: ${error.message}`;
   }
+}
+
+function renderTaskResult(task, target) {
+  if (!task || !task.request) {
+    target.classList.add("result-empty");
+    target.textContent = task?.message || "任务已提交";
+    return;
+  }
+
+  target.classList.remove("result-empty");
+  if (task.request.interface === "gpio") {
+    target.innerHTML = renderGpioTask(task);
+    return;
+  }
+  target.textContent = JSON.stringify(task, null, 2);
+}
+
+function renderGpioTask(task) {
+  const request = task.request || {};
+  const params = request.params || {};
+  const result = task.result || {};
+  const actionText = {
+    info: "GPIO 信息",
+    read: "GPIO 读取",
+    write: "GPIO 输出",
+  }[request.action] || request.action || "-";
+  const modeText = request.dry_run ? "Dry run" : result.simulated ? "模拟" : "真实硬件";
+  const statusText = task.status || "-";
+
+  const summary = `
+    <div class="result-summary">
+      <span class="result-pill">${escapeHtml(statusText)}</span>
+      <span>${escapeHtml(actionText)}</span>
+      <span>任务 ${escapeHtml(task.id || "-")}</span>
+      <span>${escapeHtml(modeText)}</span>
+    </div>
+  `;
+
+  if (task.status === "queued" || task.status === "running") {
+    return `<div class="result-card">${summary}<p class="hint">${escapeHtml(task.message || "任务执行中")}</p></div>`;
+  }
+
+  if (task.status === "failed" || task.status === "rejected") {
+    return `<div class="result-card">${summary}<p class="hint">${escapeHtml(task.message || "任务失败")}</p></div>`;
+  }
+
+  if (request.action === "info") {
+    return `
+      <div class="result-card">
+        ${summary}
+        ${renderResultKv([
+          ["芯片", result.chip || params.chip || "-"],
+          ["来源", result.simulated ? "模拟数据" : "板卡实测"],
+        ])}
+        ${renderGpioInfo(result.text || "")}
+      </div>
+    `;
+  }
+
+  if (request.action === "read") {
+    const values = result.values || {};
+    return `
+      <div class="result-card">
+        ${summary}
+        ${renderResultKv([
+          ["芯片", result.chip || params.chip || "-"],
+          ["Line", Object.keys(values).join(", ") || params.line || "-"],
+          ["读取值", Object.values(values).join(", ") || "-"],
+          ["来源", result.simulated ? "模拟数据" : "板卡实测"],
+        ])}
+      </div>
+    `;
+  }
+
+  if (request.action === "write") {
+    return `
+      <div class="result-card">
+        ${summary}
+        ${renderResultKv([
+          ["芯片", result.chip || params.chip || "-"],
+          ["Line", result.line ?? params.line ?? "-"],
+          ["输出值", result.value ?? params.value ?? "-"],
+          ["状态", result.mode === "held" ? "持续保持" : "已提交"],
+          ["来源", result.simulated ? "Dry run / 模拟" : "板卡实测"],
+        ])}
+      </div>
+    `;
+  }
+
+  return `<div class="result-card">${summary}<pre class="raw-output">${escapeHtml(JSON.stringify(result, null, 2))}</pre></div>`;
+}
+
+function renderResultKv(rows) {
+  return `
+    <dl class="result-kv">
+      ${rows
+        .map(
+          ([key, value]) => `
+            <div>
+              <dt>${escapeHtml(key)}</dt>
+              <dd>${escapeHtml(value)}</dd>
+            </div>
+          `
+        )
+        .join("")}
+    </dl>
+  `;
+}
+
+function renderGpioInfo(text) {
+  const lines = parseGpioInfo(text);
+  if (!lines.length) {
+    return `<pre class="raw-output">${escapeHtml(text || "没有返回 GPIO 信息")}</pre>`;
+  }
+  return `
+    <table class="gpio-lines">
+      <thead>
+        <tr>
+          <th>Line</th>
+          <th>名称</th>
+          <th>占用</th>
+          <th>方向</th>
+          <th>电平逻辑</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${lines
+          .map(
+            (line) => `
+              <tr>
+                <td>${escapeHtml(line.line)}</td>
+                <td>${escapeHtml(line.name)}</td>
+                <td>${escapeHtml(line.consumer)}</td>
+                <td>${escapeHtml(line.direction)}</td>
+                <td>${escapeHtml(line.active)}</td>
+              </tr>
+            `
+          )
+          .join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function parseGpioInfo(text) {
+  return String(text || "")
+    .split("\n")
+    .map((line) => {
+      const match = line.match(/line\s+(\d+):\s+(.+)/);
+      if (!match) {
+        return null;
+      }
+      const tokens = match[2].match(/"[^"]*"|\S+/g) || [];
+      return {
+        line: match[1],
+        name: cleanGpioToken(tokens[0]) || "-",
+        consumer: cleanGpioToken(tokens[1]) || "-",
+        direction: cleanGpioToken(tokens[2]) || "-",
+        active: cleanGpioToken(tokens[3]) || "-",
+      };
+    })
+    .filter(Boolean);
+}
+
+function cleanGpioToken(value) {
+  return String(value || "").replace(/^"|"$/g, "");
 }
 
 function escapeHtml(value) {

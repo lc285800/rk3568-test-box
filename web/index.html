@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>RK3568 测试工具盒</title>
-    <link rel="stylesheet" href="/static/styles.css" />
+    <link rel="stylesheet" href="/static/styles.css?v=20260513-gpio-held" />
   </head>
   <body>
     <header class="topbar">
@@ -84,17 +84,6 @@
             Line
             <input name="line" type="number" min="0" max="511" value="0" />
           </label>
-          <label>
-            输出值
-            <select name="value">
-              <option value="1">1 高电平</option>
-              <option value="0">0 低电平</option>
-            </select>
-          </label>
-          <label>
-            保持 ms
-            <input name="duration_ms" type="number" min="10" max="10000" value="200" />
-          </label>
           <label class="check">
             <input name="dry_run" type="checkbox" checked />
             Dry run
@@ -106,11 +95,12 @@
           <div class="button-row">
             <button type="button" data-gpio-action="info">信息</button>
             <button type="button" data-gpio-action="read">读取</button>
-            <button type="button" data-gpio-action="write">输出</button>
+            <button type="button" data-gpio-action="write" data-gpio-value="0">输出低</button>
+            <button type="button" data-gpio-action="write" data-gpio-value="1">输出高</button>
           </div>
         </form>
-        <p class="hint">真实输出前请取消 Dry run，并勾选确认写入。建议先用万用表或 LED 串联限流电阻测试空闲引脚。</p>
-        <pre id="gpio-result" class="result"></pre>
+        <p class="hint">真实输出前请取消 Dry run，并勾选确认写入。输出会保持到再次输出同一 Line、服务重启或板卡重启。</p>
+        <div id="gpio-result" class="result"></div>
       </section>
 
       <section class="panel">
@@ -122,6 +112,6 @@
       </section>
     </main>
 
-    <script src="/static/app.js"></script>
+    <script src="/static/app.js?v=20260513-gpio-held"></script>
   </body>
 </html>

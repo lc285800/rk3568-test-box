@@ -40,7 +40,7 @@ def test_confirmed_gpio_write_is_accepted():
         TaskRequest(
             interface="gpio",
             action="write",
-            params={"chip": "/dev/gpiochip0", "line": 1, "value": 1, "duration_ms": 100},
+            params={"chip": "/dev/gpiochip0", "line": 1, "value": 1},
             dry_run=False,
             confirm=True,
         )
