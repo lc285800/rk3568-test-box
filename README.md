@@ -129,9 +129,9 @@ http://192.168.2.88:8080
 - `web/`：无需构建工具的静态 Web 控制台，可以展示设备资源、提交 dry-run 任务并显示实时日志。
 - `tests/`：不依赖真实板卡的基础测试，覆盖模拟资源和危险写操作确认逻辑。
 
-当前阶段是 GPIO 外设可测试，暂停等待用户实测。现在适合测试 UI、API、mock 模式、dry-run 任务，以及板卡真实模式下的 GPIO 信息、读取和持续高/低电平输出；还不适合直接控制真实 I2C/UART/CAN/PWM/ADC 外设。
+当前阶段是 UART 基本功能已通过用户实测，准备进入 I2C Adapter。现在适合测试 UI、API、mock 模式、dry-run 任务，以及板卡真实模式下的 GPIO 信息/读取/持续高低电平输出、UART 端口列举/短窗口监听接收/一次性发送/发送并等回复；还不适合直接控制真实 I2C/CAN/PWM/ADC 外设，也暂不支持 RS232/RS485 方向控制和 UART 连续发送。
 
-项目后续按单个外设里程碑推进：GPIO 完成后暂停并交给用户测试，测试通过后再继续 I2C、UART、RS232/RS485、CAN、PWM、ADC，依次循环。详细流程记录在 [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)。
+项目后续按单个外设里程碑推进：每完成一个外设节点就暂停并交给用户测试，测试通过后再继续下一个外设。详细流程记录在 [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)。
 
 实际测试时优先跟随 [docs/QUICKSTART.md](docs/QUICKSTART.md) 操作。后续每完成一个外设，都会把测试步骤追加到该文档。
 
@@ -182,9 +182,9 @@ pytest
 
 ## 后续路线
 
-1. 用户实测 GPIO，修复反馈问题。
-2. 实现 I2C Adapter 并暂停实测。
-3. 继续实现 UART、RS232/RS485、CAN、PWM、ADC。
+1. 实现 I2C Adapter 并暂停实测。
+2. 根据用户反馈继续修复 UART/GPIO 问题。
+3. 继续实现 RS232/RS485、CAN、PWM、ADC。
 4. 增加测试模板、批量测试流程、权限确认和安全保护。
 5. 增加测试报告导出。
 6. 如需交付给 Windows 用户，封装为 Tauri 或 Electron 桌面应用。

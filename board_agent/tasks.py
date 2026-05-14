@@ -5,6 +5,7 @@ import uuid
 from dataclasses import dataclass, field
 
 from .adapters.gpio import GpioAdapter
+from .adapters.uart import UartAdapter
 from .events import EventBus
 from .models import TaskRecord, TaskRequest, TaskResponse
 
@@ -13,7 +14,7 @@ READ_ONLY_ACTIONS = {
     "demo": {"ping", "echo"},
     "gpio": {"read", "info"},
     "i2c": {"list"},
-    "uart": {"list"},
+    "uart": {"list", "read", "listen"},
     "rs232": {"list"},
     "rs485": {"list"},
     "can": {"status"},
@@ -100,6 +101,12 @@ class TaskManager:
             }
         if request.interface == "gpio":
             return GpioAdapter(mock_mode=self.mock_mode).handle(
+                request.action,
+                request.params,
+                dry_run=request.dry_run,
+            )
+        if request.interface == "uart":
+            return UartAdapter(mock_mode=self.mock_mode).handle(
                 request.action,
                 request.params,
                 dry_run=request.dry_run,

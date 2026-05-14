@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>RK3568 测试工具盒</title>
-    <link rel="stylesheet" href="/static/styles.css?v=20260513-gpio-held" />
+    <link rel="stylesheet" href="/static/styles.css?v=20260514-uart-listen" />
   </head>
   <body>
     <header class="topbar">
@@ -104,6 +104,67 @@
       </section>
 
       <section class="panel">
+        <h2>UART 测试</h2>
+        <form id="uart-form" class="task-form uart-form">
+          <label>
+            <span class="field-label">端口</span>
+            <input name="port" value="/dev/ttyS3" />
+          </label>
+          <label>
+            <span class="field-label">波特率</span>
+            <select name="baudrate">
+              <option value="9600">9600</option>
+              <option value="115200" selected>115200</option>
+              <option value="230400">230400</option>
+              <option value="460800">460800</option>
+              <option value="921600">921600</option>
+            </select>
+          </label>
+          <label>
+            <span class="field-label">校验</span>
+            <select name="parity">
+              <option value="N">N</option>
+              <option value="E">E</option>
+              <option value="O">O</option>
+            </select>
+          </label>
+          <label>
+            <span class="field-label">数据</span>
+            <input name="data" value="hello" />
+          </label>
+          <label>
+            <span class="field-label">换行</span>
+            <select name="line_ending">
+              <option value="none">无</option>
+              <option value="lf">LF</option>
+              <option value="cr">CR</option>
+              <option value="crlf">CRLF</option>
+            </select>
+          </label>
+          <label>
+            <span class="field-label">读取字节</span>
+            <input name="max_read_bytes" type="number" min="1" max="4096" value="256" />
+          </label>
+          <label class="check">
+            <input name="dry_run" type="checkbox" checked />
+            Dry run
+          </label>
+          <label class="check">
+            <input name="confirm" type="checkbox" />
+            确认发送
+          </label>
+          <div class="button-row">
+            <button type="button" data-uart-action="list">列举</button>
+            <button type="button" data-uart-action="listen">监听接收</button>
+            <button type="button" data-uart-action="write">发送</button>
+            <button type="button" data-uart-action="transceive">发送并等回复</button>
+          </div>
+        </form>
+        <p class="hint">监听接收会等待约 5 秒，请先点击监听再从串口助手发送。真实发送前请取消 Dry run，并勾选确认发送。</p>
+        <div id="uart-result" class="result"></div>
+      </section>
+
+      <section class="panel">
         <div class="log-head">
           <h2>实时日志</h2>
           <button id="clear-log">清空</button>
@@ -112,6 +173,6 @@
       </section>
     </main>
 
-    <script src="/static/app.js?v=20260513-gpio-held"></script>
+    <script src="/static/app.js?v=20260514-uart-listen2"></script>
   </body>
 </html>

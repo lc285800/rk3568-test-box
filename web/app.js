@@ -6,6 +6,7 @@ const resources = document.querySelector("#resources");
 const log = document.querySelector("#log");
 const taskResult = document.querySelector("#task-result");
 const gpioResult = document.querySelector("#gpio-result");
+const uartResult = document.querySelector("#uart-result");
 
 const resourceLabels = {
   gpiochips: "GPIO",
@@ -177,6 +178,49 @@ document.querySelectorAll("[data-gpio-action]").forEach((button) => {
   });
 });
 
+document.querySelectorAll("[data-uart-action]").forEach((button) => {
+  button.addEventListener("click", async () => {
+    const form = document.querySelector("#uart-form");
+    const data = new FormData(form);
+    const action = button.dataset.uartAction;
+    const params = {
+      port: data.get("port"),
+      baudrate: Number(data.get("baudrate")),
+      parity: data.get("parity"),
+      data: data.get("data"),
+      line_ending: data.get("line_ending"),
+      max_read_bytes: Number(data.get("max_read_bytes")),
+      timeout_ms: 1000,
+      read_timeout_ms: 500,
+      listen_timeout_ms: 5000,
+    };
+
+    const isReadOnlyAction = action === "list" || action === "read" || action === "listen";
+    const body = {
+      interface: "uart",
+      action,
+      params,
+      dry_run: isReadOnlyAction ? false : data.get("dry_run") === "on",
+      confirm: data.get("confirm") === "on",
+    };
+
+    try {
+      const response = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const created = await response.json();
+      appendLog("UART 任务已提交", created);
+      renderTaskResult(created, uartResult);
+      window.setTimeout(() => loadTask(created.id, uartResult), 500);
+    } catch (error) {
+      uartResult.textContent = `UART 任务失败: ${error.message}`;
+      appendLog("UART 任务失败", { error: error.message });
+    }
+  });
+});
+
 async function loadTask(id, target) {
   try {
     const task = await getJson(`/api/tasks/${id}`);
@@ -199,6 +243,10 @@ function renderTaskResult(task, target) {
   target.classList.remove("result-empty");
   if (task.request.interface === "gpio") {
     target.innerHTML = renderGpioTask(task);
+    return;
+  }
+  if (task.request.interface === "uart") {
+    target.innerHTML = renderUartTask(task);
     return;
   }
   target.textContent = JSON.stringify(task, null, 2);
@@ -277,6 +325,113 @@ function renderGpioTask(task) {
   }
 
   return `<div class="result-card">${summary}<pre class="raw-output">${escapeHtml(JSON.stringify(result, null, 2))}</pre></div>`;
+}
+
+function renderUartTask(task) {
+  const request = task.request || {};
+  const params = request.params || {};
+  const result = task.result || {};
+  const actionText = {
+    list: "UART 端口",
+    read: "UART 读取",
+    listen: "UART 监听接收",
+    write: "UART 发送",
+    transceive: "UART 发送并等回复",
+  }[request.action] || request.action || "-";
+  const modeText = request.dry_run ? "Dry run" : result.simulated ? "模拟" : "真实硬件";
+  const summary = `
+    <div class="result-summary">
+      <span class="result-pill">${escapeHtml(task.status || "-")}</span>
+      <span>${escapeHtml(actionText)}</span>
+      <span>任务 ${escapeHtml(task.id || "-")}</span>
+      <span>${escapeHtml(modeText)}</span>
+    </div>
+  `;
+
+  if (task.status === "queued" || task.status === "running") {
+    return `<div class="result-card">${summary}<p class="hint">${escapeHtml(task.message || "任务执行中")}</p></div>`;
+  }
+
+  if (task.status === "failed" || task.status === "rejected") {
+    return `<div class="result-card">${summary}<p class="hint">${escapeHtml(task.message || "任务失败")}</p></div>`;
+  }
+
+  if (request.action === "list") {
+    return `
+      <div class="result-card">
+        ${summary}
+        ${renderUartPorts(result.ports || [])}
+      </div>
+    `;
+  }
+
+  if (request.action === "read" || request.action === "listen") {
+    return `
+      <div class="result-card">
+        ${summary}
+        ${renderResultKv([
+          ["端口", result.port || params.port || "-"],
+          ["波特率", result.baudrate || params.baudrate || "-"],
+          ["读取字节", result.bytes_read ?? "-"],
+          ["等待窗口", result.listen_timeout_ms ? `${result.listen_timeout_ms} ms` : `${params.read_timeout_ms || 500} ms`],
+          ["来源", result.simulated ? "模拟数据" : "板卡实测"],
+        ])}
+        ${renderUartData("RX", result.data || "", result.hex || "")}
+      </div>
+    `;
+  }
+
+  if (request.action === "transceive" || request.action === "write") {
+    return `
+      <div class="result-card">
+        ${summary}
+        ${renderResultKv([
+          ["端口", result.port || params.port || "-"],
+          ["波特率", result.baudrate || params.baudrate || "-"],
+          ["发送字节", result.bytes_written ?? "-"],
+          ["读取字节", result.bytes_read ?? "-"],
+          ["来源", result.simulated ? "Dry run / 模拟" : "板卡实测"],
+        ])}
+        ${renderUartData("TX", result.tx || result.data || params.data || "", result.tx_hex || result.hex || "")}
+        ${request.action === "transceive" ? renderUartData("RX", result.rx || "", result.rx_hex || "") : ""}
+      </div>
+    `;
+  }
+
+  return `<div class="result-card">${summary}<pre class="raw-output">${escapeHtml(JSON.stringify(result, null, 2))}</pre></div>`;
+}
+
+function renderUartPorts(ports) {
+  if (!ports.length) {
+    return `<p class="hint">未发现串口设备</p>`;
+  }
+  return `
+    <table class="uart-table">
+      <thead><tr><th>端口</th></tr></thead>
+      <tbody>
+        ${ports.map((port) => `<tr><td>${escapeHtml(port)}</td></tr>`).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderUartData(label, text, hex) {
+  return `
+    <table class="uart-table">
+      <thead>
+        <tr>
+          <th>${escapeHtml(label)}</th>
+          <th>HEX</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>${escapeHtml(text || "-")}</td>
+          <td>${escapeHtml(hex || "-")}</td>
+        </tr>
+      </tbody>
+    </table>
+  `;
 }
 
 function renderResultKv(rows) {

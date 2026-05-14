@@ -86,10 +86,45 @@ exit [lindex $result 3]
 EOF
 ```
 
+上传文件强制规则：
+
+- `scp` 的远端目标必须写到准确子目录或准确文件名，禁止把不同目录的文件一次性传到 `/root/rk3568_finger_box/` 根目录后再移动。
+- 推荐按目录分组上传，示例：
+
+```bash
+scp board_agent/tasks.py root@192.168.2.88:/root/rk3568_finger_box/board_agent/tasks.py
+scp board_agent/adapters/uart.py root@192.168.2.88:/root/rk3568_finger_box/board_agent/adapters/uart.py
+scp web/index.html web/app.js web/styles.css root@192.168.2.88:/root/rk3568_finger_box/web/
+scp docs/PROJECT_STATUS.md docs/QUICKSTART.md docs/ISSUES.md root@192.168.2.88:/root/rk3568_finger_box/docs/
+scp tests/test_uart_adapter.py tests/test_task_validation.py root@192.168.2.88:/root/rk3568_finger_box/tests/
+```
+
+- 上传后如果怀疑误传，立即检查并清理根目录散落文件：
+
+```bash
+ssh root@192.168.2.88 "cd /root/rk3568_finger_box && ls -1 tasks.py uart.py index.html app.js styles.css PROJECT_STATUS.md QUICKSTART.md ISSUES.md test_uart_adapter.py test_task_validation.py 2>/dev/null"
+```
+
 启动或重启板端服务前，优先使用仓库内脚本，避免从错误目录启动导致 `No module named board_agent`：
 
 ```bash
 ssh root@192.168.2.88 "cd /root/rk3568_finger_box && ./scripts/run_board_agent.sh"
+```
+
+重启板端服务强制规则：
+
+- 禁止使用会匹配到当前 SSH 命令自身的 `pkill -f 'board_agent'`、`pkill -f 'python3 -m board_agent'` 这类写法；它可能把正在执行的 SSH 会话一起杀掉，导致服务没启动或状态不确定。
+- 推荐用精确进程名查询 PID，再按 PID 停止，最后从项目目录启动：
+
+```bash
+ssh root@192.168.2.88 'pids=$(pgrep -f "^python3 -m board_agent$" || true); if test "x$pids" != "x"; then kill $pids; sleep 1; fi; cd /root/rk3568_finger_box && nohup ./scripts/run_board_agent.sh > board_agent.log 2>&1 &'
+```
+
+- 重启后必须验证只剩一个监听 8080 的 Board Agent：
+
+```bash
+ssh root@192.168.2.88 "pgrep -af '^python3 -m board_agent$'; ss -lntp | grep 8080"
+curl -s -o /dev/null -w "%{http_code}\n" http://192.168.2.88:8080/api/health
 ```
 
 如果需要验证真实板卡 Web UI，优先直接针对真实板卡地址 `http://192.168.2.88:8080` 做命令行检查，不要用 `127.0.0.1` 代替真实板卡地址，除非明确是在做本地 mock 验证。
@@ -107,7 +142,12 @@ curl -s -o /dev/null -w "%{http_code}\n" http://192.168.2.88:8080/api/health
 远程操作注意事项：
 
 - 上传文件时目标路径必须精确到板端项目目录下对应子目录，避免误传到 `/root/rk3568_finger_box/` 根目录。
+- 不要把多个不同子目录的文件用一个 `scp ... root@192.168.2.88:/root/rk3568_finger_box/` 上传到根目录；必须按目录分组或精确到目标文件。
+- 重启服务不要使用宽泛 `pkill -f`，必须用上面的精确 PID 流程，避免误杀当前 SSH 命令。
 - 修改前端静态文件后，必要时给 CSS/JS URL 加版本号，避免 Safari 缓存旧文件。
+- 每次修改 Web UI 后，必须先用 `curl` 确认板端加载到新版静态资源，再使用 MacBook 的 Safari 或 Computer Use 打开真实板卡页面 `http://192.168.2.88:8080` 做视觉检查；确认面板、输入框、复选框、按钮、结果区和日志区没有溢出、遮挡、裁切或错行后，才能交给用户验收。
+- 表单类 UI 必须显式统一 label 行高和控件高度。文本框、下拉框、数字框、按钮同排出现时，不能依赖浏览器默认控件高度；需要在 Safari 里确认标签基线、控件顶边/底边对齐。
+- 用 Computer Use 验证 Web UI 时，至少要滚动到本次改动的面板，必要时刷新 Safari 以避开缓存，并执行一个安全的 dry-run 或只读操作确认按钮可点击、结果区可显示。不要只依赖 Codex 内置浏览器或 `curl` 判断 UI 正常。
 - 不要在没有明确需求时远程执行真实硬件写操作；涉及 GPIO 输出、CAN 发送、PWM 输出等必须符合硬件安全要求。
 
 ## 工作原则
@@ -157,20 +197,24 @@ curl -s -o /dev/null -w "%{http_code}\n" http://192.168.2.88:8080/api/health
 - 实现任务模型和 `WS /ws/events`。
 - 实现 GPIO Adapter 的 `info/read/write` 最小可测试能力。
 - 实现 Web GPIO 测试面板。
+- 实现 UART Adapter 的 `list/read/listen/write/transceive` 最小可测试能力。
+- 实现 Web UART 测试面板。
+- GPIO 已通过用户实测。
+- UART 基本功能已通过用户实测。
 
 下一步：
 
-1. 当前暂停等待用户实测 GPIO。
-2. 用户反馈 GPIO bug 时，优先修 GPIO bug。
-3. 用户确认 GPIO 通过或明确说“项目继续”后，实现 I2C Adapter。
-4. 后续按 UART、RS232/RS485、CAN、PWM、ADC 顺序推进。
+1. 当前准备进入 I2C Adapter。
+2. 用户反馈 UART/GPIO bug 时，优先修 bug。
+3. 实现 I2C 总线扫描、地址范围校验和寄存器读写 dry-run/真实模式。
+4. 后续按 RS232/RS485、CAN、PWM、ADC 顺序推进。
 5. 每完成一个外设，更新 `docs/PROJECT_STATUS.md` 并停下来让用户测试。
 
 ## 验证要求
 
 - 文档变更后检查 Markdown 链接和标题结构。
 - 后端实现后至少覆盖健康检查、资源枚举、参数校验、模拟任务、错误返回。
-- 前端实现后至少验证 Mac 和 Windows 浏览器兼容性。
+- 前端实现后至少验证 Mac 和 Windows 浏览器兼容性；当前真实板卡 UI 必须优先用 MacBook Safari/Computer Use 检查布局和交互，特别注意宽屏/窄屏下按钮不能冲出面板，文本不能重叠，结果区和日志区不能撑宽页面，同一行表单控件的高度和垂直对齐必须一致。
 - 涉及真实板卡的测试必须先运行只读探测，再运行写操作。
 
 ## Git 同步流程

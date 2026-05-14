@@ -1,10 +1,10 @@
 # 项目执行进度
 
-更新时间：2026-05-13
+更新时间：2026-05-14
 
 ## 当前阶段
 
-项目处于 **GPIO 外设可测试，暂停等待用户实测** 阶段。
+项目处于 **UART 基本功能已通过用户实测，准备进入 I2C Adapter** 阶段。
 
 当前可以实测：
 
@@ -15,10 +15,12 @@
 - 通过 WebSocket 查看实时日志。
 - 使用 mock 模式模拟 GPIO、I2C、UART、CAN、PWM、ADC 资源。
 - 在板卡真实模式下测试 GPIO 信息、GPIO 输入读取、持续高/低电平输出。
+- 在板卡真实模式下测试 UART 端口列举、短窗口监听接收、一次性发送、发送并等回复。
 
 当前还不能直接用于真实控制板卡外设：
 
-- I2C/UART/CAN/PWM/ADC 的真实 Hardware Adapter 尚未实现。
+- I2C/CAN/PWM/ADC 的真实 Hardware Adapter 尚未实现。
+- RS232/RS485 方向控制、循环发送、监听任务尚未实现。
 - 还没有完成资源锁、审计日志和全部接口级参数校验。
 - 不建议对 `gpioinfo` 标记为 `[used]` 的 GPIO line 做输出测试。
 
@@ -70,6 +72,25 @@
   - GPIO 输出。
   - Dry run 和确认写入开关。
   - GPIO 输出面板已简化为“读取 / 输出低 / 输出高”，不再暴露保持时间。
+- UART Adapter：
+  - `list`：列举 `/dev/ttyS*`、`/dev/ttyUSB*`、`/dev/ttyAMA*`、`/dev/ttyCH*`。
+  - `read`：按串口参数读取一次数据。
+  - `listen`：打开约 5 秒接收窗口，适合接收 PC 串口助手或被测设备主动发送的数据。
+  - `write`：按文本或 HEX 发送一次数据。
+  - `transceive`：发送一次数据后读取一次响应。
+  - 支持 `dry_run` 和 mock 模式。
+  - 真实发送需要 `confirm=true`，否则后端拒绝。
+  - 支持 port、baudrate、bytesize、parity、stopbits、timeout、max_read_bytes、encoding、line_ending 参数校验。
+- Web UART 面板：
+  - UART 端口列举。
+  - UART 监听接收。
+  - UART 发送。
+  - UART 发送并等回复。
+  - Dry run 和确认发送开关。
+  - UART 表单已调整为输入区、确认区、操作区分行布局，避免 Safari 宽屏下按钮溢出面板。
+- 实测验收：
+  - GPIO 已通过用户实测。
+  - UART 基本功能已通过用户实测：Web 端发送到 PC 串口助手、短窗口监听接收、UART 基础 UI 和任务结果展示可用。
 - Web UI 修复：
   - 实时日志和结果区域中的长 JSON 自动换行，不再撑宽页面。
   - 已在 MacBook Safari 访问 `http://192.168.2.88:8080` 提交 dry-run ping 任务验证。
@@ -96,11 +117,10 @@
   - 寄存器读写。
   - 地址范围校验。
   - 常见器件模板。
-- UART/RS232/RS485 Adapter：
-  - 串口参数配置。
-  - 收发数据。
+- UART/RS232/RS485 Adapter 后续增强：
   - 循环发送。
   - RS485 半双工方向控制策略。
+  - 监听任务和日志保存。
 - CAN Adapter：
   - CAN 接口状态读取。
   - 波特率配置。
@@ -127,9 +147,7 @@
 
 ## 下一步计划
 
-当前暂停，等待用户实测 GPIO。
-
-用户测试 GPIO 通过后，下一步进入 I2C Adapter：
+当前 UART 基本功能已验收。下一步进入 I2C Adapter：
 
 1. I2C 总线扫描。
 2. I2C 地址范围校验。
@@ -180,11 +198,13 @@
 - dry-run 任务是否能提交并在日志中显示。
 - WebSocket 是否会实时推送任务事件。
 - 板卡真实模式下的 GPIO 信息、读取和持续高/低电平输出。
+- 板卡真实模式下的 UART 端口列举、监听接收、发送、发送并等回复。
 
 现在不适合测试：
 
 - 真实 I2C 写寄存器。
 - 真实 UART/RS485 连续发送。
+- RS485 半双工方向控制。
 - 真实 CAN 发帧。
 - 真实 PWM 输出。
 - 修改 `/boot/uEnv`、设备树 overlay、CAN 波特率等系统状态。
@@ -218,6 +238,30 @@ http://192.168.2.88:8080
 7. 观察 LED/万用表/逻辑分析仪变化，并查看实时日志和任务结果。
 8. 如需切换电平，直接点击另一个输出按钮。
 
+## UART 实测步骤
+
+优先按 [QUICKSTART.md](QUICKSTART.md) 操作。下面保留当前 UART 节点的简要步骤。
+
+建议先准备 USB-TTL 模块或已确认电平兼容的被测串口设备，并确认 GND、TX、RX 接线安全。
+
+在电脑浏览器打开：
+
+```text
+http://192.168.2.88:8080
+```
+
+建议测试顺序：
+
+1. 打开 UART 测试面板。
+2. 保持 Dry run 勾选，点击“列举”，确认任务流程正常。
+3. 端口默认从 `/dev/ttyS3` 开始测试，也可按资源枚举选择 `/dev/ttyS7`、`/dev/ttyS9`。
+4. 设置波特率、校验位、发送数据和换行方式。
+5. 保持 Dry run 勾选，点击“发送”，确认参数和任务结果。
+6. 接好串口设备或 TX/RX 回环线，并确认电平兼容。
+7. 如果要接收 PC 串口助手主动发送的数据，取消 Dry run 后先点击“监听接收”，再在约 5 秒内从 PC 发送数据。
+8. 如果要从 Web 发送数据到 PC 串口助手，取消 Dry run，勾选“确认发送”，点击“发送”。
+9. 如果被测设备是 AT 指令或查询协议，点击“发送并等回复”，查看 TX/RX 文本、HEX、发送字节数和读取字节数。
+
 GPIO 测试注意事项：
 
 - 不要对 `gpioinfo` 显示 `[used]` 的 line 做输出测试。
@@ -230,9 +274,15 @@ GPIO 测试注意事项：
 最近一次本地验证：
 
 ```text
-python3 -m compileall board_agent tests
 .venv/bin/pytest
-12 passed
+21 passed
+```
+
+最近一次板端验证：
+
+```text
+pytest
+21 passed
 ```
 
 本地 mock 服务已验证：
